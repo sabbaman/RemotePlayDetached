@@ -10,13 +10,13 @@ import (
 	"strings"
 )
 
-//GetApps func
+// GetApps func
 func GetApps() *[]App {
 	fmt.Println("imported Apps:", apps)
 	return &apps
 }
 
-//ImportApp func
+// ImportApp func
 func ImportApp(app App) {
 	err := os.Chdir(rpdPath)
 	if err != nil {
@@ -34,9 +34,8 @@ func ImportApp(app App) {
 
 	f.WriteString(app.Name + "\n")
 	f.WriteString(app.Path + "\n")
-	if app.Args != "" {
-		f.WriteString(app.Args)
-	}
+	f.WriteString(app.Args + "\n")
+	f.WriteString(app.WorkingDirectory + "\n")
 
 	f.Sync()
 
@@ -44,13 +43,13 @@ func ImportApp(app App) {
 	sortApps()
 }
 
-//EditApp func
+// EditApp func
 func EditApp(oldApp, newApp App) {
 	DeleteApp(oldApp)
 	ImportApp(newApp)
 }
 
-//DeleteApp func
+// DeleteApp func
 func DeleteApp(app App) {
 	err := os.Chdir(rpdPath)
 	if err != nil {
@@ -93,9 +92,11 @@ func loadImportedApps() []App {
 		}
 		cleanStrings(&config)
 
-		newApp := App{Name: config[0], Path: config[1]}
-		if len(config) == 3 {
-			newApp.Args = config[2]
+		newApp, err := appFromConfig(config)
+		if err != nil {
+			file.Close()
+			log.Printf("Cannot load app %q: %v", fileMeta.Name(), err)
+			continue
 		}
 
 		loadedApps = append(loadedApps, newApp)
@@ -110,6 +111,20 @@ func sortApps() {
 	sort.Slice(apps, func(i, j int) bool {
 		return apps[i].Name < apps[j].Name
 	})
+}
+
+func appFromConfig(config []string) (App, error) {
+	if len(config) < 2 {
+		return App{}, fmt.Errorf("app configuration requires a name and executable path")
+	}
+	app := App{Name: config[0], Path: config[1]}
+	if len(config) >= 3 {
+		app.Args = config[2]
+	}
+	if len(config) >= 4 {
+		app.WorkingDirectory = config[3]
+	}
+	return app, nil
 }
 
 func checkForDataFolder() bool {

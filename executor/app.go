@@ -1,13 +1,14 @@
 package executor
 
-//App struct
+// App struct
 type App struct {
-	Name string
-	Path string
-	Args string
+	Name             string
+	Path             string
+	Args             string
+	WorkingDirectory string
 }
 
-//Equals func
+// Equals func
 func (a *App) Equals(otherApp App) bool {
-	return a.Name == otherApp.Name && a.Path == otherApp.Path && a.Args == otherApp.Args
+	return a.Name == otherApp.Name && a.Path == otherApp.Path && a.Args == otherApp.Args && a.WorkingDirectory == otherApp.WorkingDirectory
 }

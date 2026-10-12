@@ -13,7 +13,7 @@ var apps *[]executor.App
 
 var appList *widget.Form
 
-//var appList widget.NewVBox
+// var appList widget.NewVBox
 var appListContainer *fyne.Container
 var appListGroup *widget.Group
 
@@ -26,6 +26,8 @@ func importApp() {
 	pathEntry := NewButtonEntry()
 
 	argsEntry := NewButtonEntry()
+	workingDirectoryEntry := NewButtonEntry()
+	workingDirectoryEntry.SetPlaceHolder("Empty = executable directory")
 
 	/*
 		nameEntry := widget.NewEntry()
@@ -38,7 +40,8 @@ func importApp() {
 	path := widget.NewFormItem("Path", pathEntry)
 
 	args := widget.NewFormItem("Args", argsEntry)
-	form := widget.NewForm(name, path, args)
+	workingDirectory := widget.NewFormItem("Working Directory", workingDirectoryEntry)
+	form := widget.NewForm(name, path, args, workingDirectory)
 	cancelButton := widget.NewButton("Cancel", func() {
 		importWindow.Close()
 		if explorerWindow != nil {
@@ -55,7 +58,7 @@ func importApp() {
 			return
 		}
 
-		newApp := executor.App{Name: appName, Path: appPath, Args: argsString}
+		newApp := executor.App{Name: appName, Path: appPath, Args: argsString, WorkingDirectory: workingDirectoryEntry.Text}
 		importWindow.Close()
 		executor.ImportApp(newApp)
 		refreshMainWindow()
@@ -68,6 +71,7 @@ func importApp() {
 	nameEntry.SetConfirmButton(okButton)
 	pathEntry.SetConfirmButton(okButton)
 	argsEntry.SetConfirmButton(okButton)
+	workingDirectoryEntry.SetConfirmButton(okButton)
 
 	buttons := fyne.NewContainerWithLayout(layout.NewHBoxLayout(), okButton, layout.NewSpacer(), fileExlporerButton, layout.NewSpacer(), cancelButton)
 

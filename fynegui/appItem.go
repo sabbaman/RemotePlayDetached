@@ -9,27 +9,17 @@ import (
 	"github.com/smaTc/RemotePlayDetached/executor"
 )
 
-//AppItem struct
+// AppItem struct
 type AppItem struct {
 	App executor.App
 	widget.Box
 }
 
-//NewAppItem func
+// NewAppItem func
 func NewAppItem(app executor.App) fyne.Widget {
 	item := &AppItem{App: app}
 	item.ExtendBaseWidget(item)
 	item.Box = *widget.NewHBox()
-	item.Box.Append(layout.NewSpacer())
-
-	argsContent := app.Args
-
-	if argsContent == "" {
-		argsContent = "none"
-	}
-
-	argsLabel := widget.NewLabel("Args: " + argsContent)
-	item.Box.Append(argsLabel)
 	item.Box.Append(layout.NewSpacer())
 
 	runButton := widget.NewButton("Run", func() {
@@ -69,11 +59,15 @@ func editApp(oldApp executor.App) {
 
 	argsEntry := NewButtonEntry()
 	argsEntry.SetText(oldApp.Args)
+	workingDirectoryEntry := NewButtonEntry()
+	workingDirectoryEntry.SetPlaceHolder("Empty = executable directory")
+	workingDirectoryEntry.SetText(oldApp.WorkingDirectory)
 
 	name := widget.NewFormItem("Name", nameEntry)
 	path := widget.NewFormItem("Path", pathEntry)
 	args := widget.NewFormItem("Args", argsEntry)
-	form := widget.NewForm(name, path, args)
+	workingDirectory := widget.NewFormItem("Working Directory", workingDirectoryEntry)
+	form := widget.NewForm(name, path, args, workingDirectory)
 
 	cancelButton := widget.NewButton("Cancel", func() {
 		editWindow.Close()
@@ -88,7 +82,7 @@ func editApp(oldApp executor.App) {
 			return
 		}
 
-		newApp := executor.App{Name: appName, Path: appPath, Args: argsString}
+		newApp := executor.App{Name: appName, Path: appPath, Args: argsString, WorkingDirectory: workingDirectoryEntry.Text}
 		editWindow.Close()
 		executor.EditApp(oldApp, newApp)
 		refreshMainWindow()
@@ -101,6 +95,7 @@ func editApp(oldApp executor.App) {
 	nameEntry.SetConfirmButton(okButton)
 	pathEntry.SetConfirmButton(okButton)
 	argsEntry.SetConfirmButton(okButton)
+	workingDirectoryEntry.SetConfirmButton(okButton)
 
 	buttons := fyne.NewContainerWithLayout(layout.NewHBoxLayout(), okButton, layout.NewSpacer(), fileExlporerButton, layout.NewSpacer(), cancelButton)
 

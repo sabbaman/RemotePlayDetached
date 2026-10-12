@@ -4,87 +4,88 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
-	"runtime"
+	"path/filepath"
 	"strings"
 )
 
 var threaded bool = false
 var exitAfterExec = false
 
-//Threaded func
+// Threaded func
 func Threaded(b bool) {
 	threaded = b
 }
 
-//SetExitAfterExec func
+// SetExitAfterExec func
 func SetExitAfterExec(b bool) {
 	exitAfterExec = b
 }
 
-//IsThreaded func
+// IsThreaded func
 func IsThreaded() bool {
 	return threaded
 }
 
-func executeApp(app App) error {
-	p, _ := os.Getwd()
-	fmt.Println("current path before execution:", p)
+func executeApp(app App) (resultErr error) {
+	if err := os.Chdir(rpdPath); err != nil {
+		return fmt.Errorf("cannot access RPD directory %q: %w", rpdPath, err)
+	}
+	defer func() {
+		if err := os.Chdir(rpdPath); err != nil {
+			if resultErr != nil {
+				resultErr = fmt.Errorf("%v; cannot restore RPD directory %q: %w", resultErr, rpdPath, err)
+			} else {
+				resultErr = fmt.Errorf("process started, but cannot restore RPD directory %q: %w", rpdPath, err)
+			}
+		}
+	}()
+
+	executable, workingDirectory, err := executionPaths(app)
+	if err != nil {
+		return err
+	}
+	if err := os.Chdir(workingDirectory); err != nil {
+		return fmt.Errorf("cannot access working directory %q: %w", workingDirectory, err)
+	}
 	var argsArray []string
 
 	if app.Args != "" {
 		argsArray = strings.Split(app.Args, " ")
 	}
 
-	path, executable, seperator := seperatePathFromExecutable(app.Path)
-	os.Chdir(rpdPath)
-	os.Chdir(path)
-
-	p2, _ := os.Getwd()
-	fmt.Println("path for execution:", p2, "; executable to run:", executable)
-
-	var cmd *exec.Cmd
-
-	if runtime.GOOS == "windows" {
-		cmd = exec.Command(executable, argsArray...)
-	} else {
-		if path != "" {
-			cmd = exec.Command("."+seperator+executable, argsArray...)
-		} else {
-			cmd = exec.Command(executable, argsArray...)
-		}
-	}
-
-	err := cmd.Start()
+	fmt.Println("path for execution:", workingDirectory, "; executable to run:", executable)
+	cmd := exec.Command(executable, argsArray...)
+	err = cmd.Start()
 	if err != nil {
 		fmt.Println(err)
 		return err
 	}
+	go cmd.Wait()
 	return nil
 
 }
 
-func seperatePathFromExecutable(path string) (string, string, string) {
-	var splittedPath []string
-	var seperator string
-
-	if strings.Contains(path, "/") {
-		splittedPath = strings.Split(path, "/")
-		seperator = "/"
-	} else if strings.Contains(path, "\\") {
-		splittedPath = strings.Split(path, "\\")
-		seperator = "\\"
-	} else {
-		splittedPath = nil
+func executionPaths(app App) (string, string, error) {
+	if app.Path == "" {
+		return "", "", fmt.Errorf("executable path cannot be empty")
 	}
-
-	var executable, directoryPath string
-
-	if splittedPath == nil {
-		executable = path
-		directoryPath = ""
-	} else {
-		executable = splittedPath[len(splittedPath)-1]
-		directoryPath = strings.Replace(path, executable, "", -1)
+	path := app.Path
+	if filepath.Base(path) == path {
+		var err error
+		path, err = exec.LookPath(path)
+		if err != nil {
+			return "", "", fmt.Errorf("cannot find executable %q: %w", app.Path, err)
+		}
 	}
-	return directoryPath, executable, seperator
+	if !filepath.IsAbs(path) {
+		path = filepath.Join(rpdPath, path)
+	}
+	path = filepath.Clean(path)
+	directory := app.WorkingDirectory
+	if directory == "" {
+		directory = filepath.Dir(path)
+	} else if !filepath.IsAbs(directory) {
+		directory = filepath.Join(rpdPath, directory)
+	}
+	return path, filepath.Clean(directory), nil
 }
