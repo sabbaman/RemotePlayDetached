@@ -78,6 +78,42 @@ To start an app directly via [Playnite](https://playnite.link/) do the following
 ### AppID
 You can find the AppID of your donor game on [SteamDB](https://steamdb.info/).
 
+## Steam Library Import
+In **Import**, choose **Steam Library** to search installed Steam games. Selecting
+a game fills its name, the Steam executable path, `-applaunch <AppID>` arguments,
+and the installation directory. Review the fields and choose **OK** to save it.
+
+RPD scans Steam's local manifests and additional libraries listed in
+`libraryfolders.vdf`; it does not query your online account or list uninstalled
+games. Standard Steam locations are detected automatically. For a custom
+installation, set `STEAM_DIR` to the Steam installation directory before starting
+RPD. The Steam executable must be available on `PATH` or in that installation.
+Flatpak Steam is also supported through `flatpak run com.valvesoftware.Steam`.
+
+Steam handles each game's executable, Proton settings, and configured launch
+options. Do not import the donor game that launches RPD, as that can launch RPD
+again. Discovery does not verify Remote Play Together support; test streaming
+and input with your intended game.
+
+### Non-Steam Shortcuts
+Choose **Import → Non-Steam** to search the non-Steam shortcuts saved in your
+local Steam profiles. Selecting an entry copies its name, executable path,
+launch arguments, and working directory into the import form. These entries
+launch the saved executable directly, rather than using `steam -applaunch`.
+
+RPD reads `userdata/*/config/shortcuts.vdf` from the same Steam locations used by
+the library picker, including Flatpak and custom `STEAM_DIR` installations.
+Identical shortcuts across profiles are listed only once. If a newly added or
+edited shortcut is missing, exit Steam normally so it saves the changes, then
+open the picker again.
+
+Steam's surrounding quotes are removed from executable and working-directory
+paths. Launch arguments retain their quoting in the form; RPD now handles
+quoted arguments (including Heroic URLs and paths with spaces) without invoking
+a shell. Shell expansions and operators are not evaluated. Steam-only launch
+wrappers such as `%command%` and forced compatibility tools are not reproduced
+by direct execution; review those entries before saving them.
+
 ## Building
 ### Linux
 1. Install Go on your System.

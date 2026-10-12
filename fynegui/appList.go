@@ -2,6 +2,7 @@ package fynegui
 
 import (
 	"fmt"
+	"strings"
 
 	"fyne.io/fyne"
 	"fyne.io/fyne/layout"
@@ -67,13 +68,71 @@ func importApp() {
 	fileExlporerButton := widget.NewButton("File Explorer", func() {
 		FileExplorer(pathEntry)
 	})
+	showLibrary := func(title string, entries []executor.App) {
+		window := rpd.NewWindow(title)
+		window.Resize(fyne.NewSize(500, 400))
+		search := widget.NewEntry()
+		search.SetPlaceHolder("Search games...")
+		list := widget.NewVBox()
+		update := func(query string) {
+			list.Children = nil
+			for _, entry := range entries {
+				entry := entry
+				if !strings.Contains(strings.ToLower(entry.Name), strings.ToLower(query)) {
+					continue
+				}
+				list.Append(widget.NewButton(entry.Name, func() {
+					// Saved entry names are also filenames.
+					nameEntry.SetText(strings.NewReplacer("/", "_", "\\", "_", "\n", " ", "\r", " ").Replace(entry.Name))
+					pathEntry.SetText(entry.Path)
+					argsEntry.SetText(entry.Args)
+					workingDirectoryEntry.SetText(entry.WorkingDirectory)
+					window.Close()
+				}))
+			}
+			if len(list.Children) == 0 {
+				list.Append(widget.NewLabel("No matching games"))
+			}
+			list.Refresh()
+		}
+		search.OnChanged = update
+		update("")
+		scroll := widget.NewScrollContainer(list)
+		header := widget.NewVBox(search, widget.NewLabel("Select a target game, not the donor that launches RPD."))
+		window.SetContent(fyne.NewContainerWithLayout(layout.NewBorderLayout(header, nil, nil, nil), header, scroll))
+		window.Show()
+	}
+	steamButton := widget.NewButton("Steam Library", func() {
+		games, client, err := executor.DiscoverSteamGames()
+		if err != nil {
+			TextPopup(err.Error(), "Steam Library")
+			return
+		}
+		entries := make([]executor.App, 0, len(games))
+		for _, game := range games {
+			entries = append(entries, executor.App{
+				Name: game.Name, Path: client.Path,
+				Args:             strings.TrimSpace(client.Args + " -applaunch " + game.AppID),
+				WorkingDirectory: game.InstallDir,
+			})
+		}
+		showLibrary("Steam Library", entries)
+	})
+	nonSteamButton := widget.NewButton("Non-Steam", func() {
+		entries, err := executor.DiscoverSteamShortcuts()
+		if err != nil {
+			TextPopup(err.Error(), "Non-Steam Shortcuts")
+			return
+		}
+		showLibrary("Non-Steam Shortcuts", entries)
+	})
 
 	nameEntry.SetConfirmButton(okButton)
 	pathEntry.SetConfirmButton(okButton)
 	argsEntry.SetConfirmButton(okButton)
 	workingDirectoryEntry.SetConfirmButton(okButton)
 
-	buttons := fyne.NewContainerWithLayout(layout.NewHBoxLayout(), okButton, layout.NewSpacer(), fileExlporerButton, layout.NewSpacer(), cancelButton)
+	buttons := fyne.NewContainerWithLayout(layout.NewHBoxLayout(), okButton, layout.NewSpacer(), steamButton, nonSteamButton, fileExlporerButton, layout.NewSpacer(), cancelButton)
 
 	importWindow.SetContent(fyne.NewContainerWithLayout(layout.NewVBoxLayout(), form, layout.NewSpacer(), buttons))
 

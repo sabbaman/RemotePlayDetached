@@ -65,12 +65,21 @@ else
     fi
     image=remoteplaydetached-builder:local
     printf 'Building dependency container...\n'
-    docker build --platform linux/amd64 -t "$image" "$root/resources/build"
+    docker build --platform linux/amd64 -t "$image" "$root/resources/buildContext"
+    container_args=(--user "$(id -u):$(id -g)")
+    if [[ "$(docker --version)" == *[Pp]odman* ]]; then
+        # Keep host ownership usable inside rootless Podman's user namespace.
+        if [[ "$(docker info --format '{{.Host.Security.Rootless}}')" == true ]]; then
+            container_args+=(--userns=keep-id)
+        fi
+        container_args+=(--volume "$root:/workspace:Z")
+    else
+        container_args+=(--mount "type=bind,source=$root,target=/workspace")
+    fi
     printf 'Compiling in the container...\n'
     docker run --rm --platform linux/amd64 \
-        --user "$(id -u):$(id -g)" \
+        "${container_args[@]}" \
         -e RPD_BUILD_CONTAINER=1 -e HOME=/tmp -e GOPATH=/tmp/go -e GOCACHE=/tmp/go-cache \
-        --mount "type=bind,source=$root,target=/workspace" \
         --workdir /workspace "$image" bash ./build.sh "$@"
 fi
 

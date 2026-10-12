@@ -6,6 +6,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strings"
+	"unicode"
 )
 
 var threaded bool = false
@@ -47,10 +48,9 @@ func executeApp(app App) (resultErr error) {
 	if err := os.Chdir(workingDirectory); err != nil {
 		return fmt.Errorf("cannot access working directory %q: %w", workingDirectory, err)
 	}
-	var argsArray []string
-
-	if app.Args != "" {
-		argsArray = strings.Split(app.Args, " ")
+	argsArray, err := parseArguments(app.Args)
+	if err != nil {
+		return fmt.Errorf("cannot parse launch arguments: %w", err)
 	}
 
 	fmt.Println("path for execution:", workingDirectory, "; executable to run:", executable)
@@ -63,6 +63,56 @@ func executeApp(app App) (resultErr error) {
 	go cmd.Wait()
 	return nil
 
+}
+
+// parseArguments tokenizes direct-exec arguments without shell expansion.
+func parseArguments(input string) ([]string, error) {
+	var args []string
+	var arg strings.Builder
+	var quote rune
+	started := false
+	quotePosition := 0
+	chars := []rune(input)
+	for i := 0; i < len(chars); i++ {
+		c := chars[i]
+		// Only escape syntax characters; ordinary Windows path separators stay literal.
+		if c == '\\' && quote != '\'' && i+1 < len(chars) {
+			next := chars[i+1]
+			if (quote == '"' && next == '"') || (quote == 0 && (next == '\'' || next == '"' || unicode.IsSpace(next))) {
+				arg.WriteRune(next)
+				started = true
+				i++
+				continue
+			}
+		}
+		if quote != 0 {
+			if c == quote {
+				quote = 0
+			} else {
+				arg.WriteRune(c)
+			}
+		} else if c == '\'' || c == '"' {
+			quote = c
+			quotePosition = i + 1
+			started = true
+		} else if unicode.IsSpace(c) {
+			if started {
+				args = append(args, arg.String())
+				arg.Reset()
+				started = false
+			}
+		} else {
+			arg.WriteRune(c)
+			started = true
+		}
+	}
+	if quote != 0 {
+		return nil, fmt.Errorf("unmatched %c quote at character %d", quote, quotePosition)
+	}
+	if started {
+		args = append(args, arg.String())
+	}
+	return args, nil
 }
 
 func executionPaths(app App) (string, string, error) {
