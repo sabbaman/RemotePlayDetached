@@ -20,14 +20,14 @@ var appListGroup *widget.Group
 
 func importApp() {
 	importWindow := rpd.NewWindow("Import App")
-	importWindow.Resize(fyne.NewSize(400, 150))
+	importWindow.Resize(fyne.NewSize(760, 520))
 
 	nameEntry := NewButtonEntry()
 
-	pathEntry := NewButtonEntry()
+	pathEntry := NewWrappedButtonEntry()
 
-	argsEntry := NewButtonEntry()
-	workingDirectoryEntry := NewButtonEntry()
+	argsEntry := NewWrappedButtonEntry()
+	workingDirectoryEntry := NewWrappedButtonEntry()
 	workingDirectoryEntry.SetPlaceHolder("Empty = executable directory")
 
 	/*
@@ -56,6 +56,10 @@ func importApp() {
 		argsString := argsEntry.Text
 
 		if appName == "" || appPath == "" {
+			return
+		}
+		if err := appFieldsError(appName, appPath, argsString, workingDirectoryEntry.Text); err != nil {
+			TextPopup(err.Error(), "Invalid Input")
 			return
 		}
 
@@ -126,15 +130,24 @@ func importApp() {
 		}
 		showLibrary("Non-Steam Shortcuts", entries)
 	})
+	heroicButton := widget.NewButton("Heroic", func() {
+		entries, err := executor.DiscoverHeroicGames()
+		if err != nil {
+			TextPopup(err.Error(), "Heroic Games")
+			return
+		}
+		showLibrary("Heroic Games", entries)
+	})
 
 	nameEntry.SetConfirmButton(okButton)
 	pathEntry.SetConfirmButton(okButton)
 	argsEntry.SetConfirmButton(okButton)
 	workingDirectoryEntry.SetConfirmButton(okButton)
 
-	buttons := fyne.NewContainerWithLayout(layout.NewHBoxLayout(), okButton, layout.NewSpacer(), steamButton, nonSteamButton, fileExlporerButton, layout.NewSpacer(), cancelButton)
+	buttons := fyne.NewContainerWithLayout(layout.NewHBoxLayout(), okButton, layout.NewSpacer(), steamButton, nonSteamButton, heroicButton, fileExlporerButton, layout.NewSpacer(), cancelButton)
 
-	importWindow.SetContent(fyne.NewContainerWithLayout(layout.NewVBoxLayout(), form, layout.NewSpacer(), buttons))
+	scroll := widget.NewScrollContainer(form)
+	importWindow.SetContent(fyne.NewContainerWithLayout(layout.NewBorderLayout(nil, buttons, nil, nil), scroll, buttons))
 
 	importWindow.Show()
 }

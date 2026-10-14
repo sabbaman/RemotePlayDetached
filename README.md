@@ -48,6 +48,10 @@ Now just launch the original game in Steam and enjoy.
 
 You can edit entries and also have arguments applied.
 
+Import and edit forms wrap long arguments and paths visually and scroll within
+the window. Wrapping does not alter saved values. Enter confirms the form;
+actual pasted line breaks must be removed before saving.
+
 Note: In the `File Explorer` you need to click on a file to select it (the selected file is registerd and can be seen in the window bottom next to `Selected:`) and finish your selection by clicking the `Confirm` button. Also directories are marked with `/`(Linux) or `\`(Windows) and you can change your drive(Windows) or root directory(Linux) from a dropdown by clicking `Drive or Root Directory` in the window top.
 
 ## Command Line Support
@@ -113,6 +117,43 @@ quoted arguments (including Heroic URLs and paths with spaces) without invoking
 a shell. Shell expansions and operators are not evaluated. Steam-only launch
 wrappers such as `%command%` and forced compatibility tools are not reproduced
 by direct execution; review those entries before saving them.
+
+## Heroic Games Import
+On Linux, choose **Import > Heroic** to search installed Epic (Legendary), GOG
+(gogdl), and Amazon (Nile) games. Selecting a game fills the import form; review
+the fields and choose **OK** to save it. RPD launches the runner CLI directly
+through the `env` executable to preserve the configured Wine/Proton prefix and
+environment variables. It does not launch Heroic.
+
+Discovery checks `~/.config/heroic`, `XDG_CONFIG_HOME`, and Flatpak Heroic config
+locations. Set `HEROIC_DIR` to your Heroic configuration root to override automatic
+detection. Runner lookup checks configured alternative binaries, `PATH`, and
+common packaged binaries. Flatpak configuration detection does not make
+sandbox-only runners accessible: entries with inaccessible runners are skipped.
+Packaged lookup includes `/usr/lib/heroic-games-launcher/app.asar.unpacked`,
+as well as the `resources/app.asar.unpacked` layout used by other installations.
+Unsupported entries are skipped with diagnostics printed to the terminal; if
+no supported games are found, the picker displays an error.
+
+Imports are snapshots of the launch settings, not a replacement for all Heroic
+features. Global defaults and per-game overrides supply the compatibility layer,
+prefix, environment, custom wrappers, executable override, and launch arguments.
+Proton always uses the binary configured in Heroic at import time, through
+`--no-wine --wrapper '<configured Proton> waitforexitandrun'`, even when UMU is
+enabled in Heroic. Per-game settings take precedence over global defaults. RPD
+does not select a different Proton version automatically; reimport to pick up
+later configuration changes. Direct Proton avoids UMU replacing the donor's
+Steam identity. Enabled EAC and BattlEye runtime paths are also preserved.
+AppImage/Flatpak-only backend binaries may require
+installing a standalone backend or configuring an accessible alternative binary
+in Heroic. Heroic argument strings use POSIX quoting and escapes without shell
+expansion; dollar-quoted strings (`$'...'` and `$"..."`) are unsupported and cause
+the entry to be skipped rather than imported with changed arguments.
+Reimport after changing settings. Cloud saves, pre/post-launch scripts, automatic
+prefix/DXVK setup, optional GameMode/MangoHud/gamescope/Steam Runtime integration,
+and game-specific fixes are not reproduced. Direct runner execution does not
+guarantee Remote Play Together streaming, overlay, or input support; test with
+your intended game and do not select the donor game that launches RPD.
 
 ## Building
 ### Linux

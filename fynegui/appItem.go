@@ -49,17 +49,17 @@ func NewAppItem(app executor.App) fyne.Widget {
 
 func editApp(oldApp executor.App) {
 	editWindow := rpd.NewWindow("Edit App")
-	editWindow.Resize(fyne.NewSize(400, 150))
+	editWindow.Resize(fyne.NewSize(760, 520))
 
 	nameEntry := NewButtonEntry()
 	nameEntry.SetText(oldApp.Name)
 
-	pathEntry := NewButtonEntry()
+	pathEntry := NewWrappedButtonEntry()
 	pathEntry.SetText(oldApp.Path)
 
-	argsEntry := NewButtonEntry()
+	argsEntry := NewWrappedButtonEntry()
 	argsEntry.SetText(oldApp.Args)
-	workingDirectoryEntry := NewButtonEntry()
+	workingDirectoryEntry := NewWrappedButtonEntry()
 	workingDirectoryEntry.SetPlaceHolder("Empty = executable directory")
 	workingDirectoryEntry.SetText(oldApp.WorkingDirectory)
 
@@ -81,6 +81,10 @@ func editApp(oldApp executor.App) {
 		if appName == "" || appPath == "" {
 			return
 		}
+		if err := appFieldsError(appName, appPath, argsString, workingDirectoryEntry.Text); err != nil {
+			TextPopup(err.Error(), "Invalid Input")
+			return
+		}
 
 		newApp := executor.App{Name: appName, Path: appPath, Args: argsString, WorkingDirectory: workingDirectoryEntry.Text}
 		editWindow.Close()
@@ -99,7 +103,8 @@ func editApp(oldApp executor.App) {
 
 	buttons := fyne.NewContainerWithLayout(layout.NewHBoxLayout(), okButton, layout.NewSpacer(), fileExlporerButton, layout.NewSpacer(), cancelButton)
 
-	editWindow.SetContent(fyne.NewContainerWithLayout(layout.NewVBoxLayout(), form, layout.NewSpacer(), buttons))
+	scroll := widget.NewScrollContainer(form)
+	editWindow.SetContent(fyne.NewContainerWithLayout(layout.NewBorderLayout(nil, buttons, nil, nil), scroll, buttons))
 
 	editWindow.Show()
 }
